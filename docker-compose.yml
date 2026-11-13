@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  robot-sim:
+    build: .
+    container_name: patrol-sim-container
+    ports:
+      - "8000:8000"
+    restart: always

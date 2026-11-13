@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>巡检仿真</title>
+  <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+</head>
+<body style="display:flex; flex-direction:column; align-items:center; font-family:sans-serif; margin-top: 50px;">
+<h2>我的智能巡检机器人</h2>
+<div id="container" style="border: 2px solid #333; box-shadow: 0 0 10px rgba(0,0,0,0.2);"></div>
+<div style="margin-top: 20px;">
+  <button onclick="move(0,-1)" style="padding:10px 30px; margin:5px; font-size:16px; cursor:pointer;">上</button><br>
+  <button onclick="move(-1,0)" style="padding:10px 30px; margin:5px; font-size:16px; cursor:pointer;">左</button>
+  <button onclick="move(1,0)" style="padding:10px 30px; margin:5px; font-size:16px; cursor:pointer;">右</button><br>
+  <button onclick="move(0,1)" style="padding:10px 30px; margin:5px; font-size:16px; cursor:pointer;">下</button>
+</div>
+<script>
+const CELL = 40;
+const stage = new Konva.Stage({ container: 'container', width: 400, height: 240 });
+const layer = new Konva.Layer();
+stage.add(layer);
+let robotCircle = null;
+
+async function loadMap() {
+  const res = await fetch('http://localhost:8000/map');
+  const data = await res.json();
+  data.map.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      layer.add(new Konva.Rect({
+        x: x * CELL, y: y * CELL, width: CELL, height: CELL,
+        fill: cell === 2 ? '#555' : cell === 1 ? '#999' : '#fff',
+        stroke: '#ccc', strokeWidth: 1
+      }));
+    });
+  });
+  drawRobot(data.robot.x, data.robot.y);
+  layer.draw();
+}
+
+function drawRobot(gx, gy) {
+  if (robotCircle) robotCircle.destroy();
+  robotCircle = new Konva.Circle({
+    x: gx * CELL + CELL/2, y: gy * CELL + CELL/2,
+    radius: CELL/3, fill: '#e74c3c'
+  });
+  layer.add(robotCircle);
+  layer.draw();
+}
+
+async function move(dx, dy) {
+  const res = await fetch('http://localhost:8000/move', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({dx, dy})
+  });
+  const data = await res.json();
+  drawRobot(data.robot.x, data.robot.y);
+}
+
+// 每500ms刷新一次状态
+setInterval(async () => {
+  const res = await fetch('http://localhost:8000/state');
+  const data = await res.json();
+  drawRobot(data.robot.x, data.robot.y);
+}, 500);
+
+loadMap();
+</script>
+</body>
+</html>
